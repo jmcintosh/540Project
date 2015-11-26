@@ -41,6 +41,9 @@ weather <- getWeatherForDate("KBTM",
                   opt_all_columns = TRUE
                   )
 
+# weather <- read.csv("weather.csv")
+# weather$X <- NULL
+
 getNearestWeatherData <- function (timestamp, x=weather$Time){
   index <- which(abs(x-timestamp) == min(abs(x-timestamp)))[[1]]
   weather[index,c(3:7,9,11,13,14)]
@@ -51,10 +54,33 @@ cToF <- function(tempC){
 }
 
 
+# test to see which method gets better results
+airport.weather1 <- as.data.frame(t(sapply(airport$date,getNearestWeatherData)))
+airport.weather2 <- as.data.frame(t(sapply(airport$date+30*60,getNearestWeatherData))) # use this one
 
-airport.weather <- as.data.frame(t(sapply(airport$date+30*60,getNearestWeatherData)))
+airport$tempF <- cToF(airport$tempC)
+airport$TemperatureF1 <- unlist(airport.weather1$TemperatureF)
+airport$TemperatureF2 <- unlist(airport.weather2$TemperatureF)
 
-airport$TemperatureF <- unlist(airport.weather$TemperatureF)
-airport$Humidity <- unlist(airport.weather$Humidity)
+diff1 <- sum((airport$tempF - airport$TemperatureF1)^2,na.rm = T)
+diff2 <- sum((airport$tempF - airport$TemperatureF2)^2,na.rm = T)
 
-plot(airport$tempC,airport$TemperatureF)
+airport.weather <- airport.weather2
+rm(airport.weather1)
+rm(airport.weather2)
+airport$TemperatureF1 <- NULL
+airport$TemperatureF2 <- NULL
+
+
+airport$w.TemperatureF <- unlist(airport.weather$TemperatureF)
+airport$w.Dew_PointF <- unlist(airport.weather$Dew_PointF)
+airport$w.Humidity <- unlist(airport.weather$Humidity)
+airport$w.Sea_Level_PressureIn <- unlist(airport.weather$Sea_Level_PressureIn)
+airport$w.VisibilityMPH <- unlist(airport.weather$VisibilityMPH)
+airport$Wind_SpeedMPH <- unlist(airport.weather$Wind_SpeedMPH)
+airport$PrecipitationIn <- unlist(airport.weather$PrecipitationIn)
+airport$Conditions <- unlist(airport.weather$Conditions)
+airport$w.WindDirDegrees <- unlist(airport.weather$WindDirDegrees)
+
+plot(cToF(airport$tempC),airport$TemperatureF)
+plot(airport$wd,airport$w.WindDirDegrees)
