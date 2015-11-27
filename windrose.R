@@ -40,9 +40,8 @@ weather <- getWeatherForDate("KBTM",
                   opt_write_to_file = FALSE,
                   opt_all_columns = TRUE
                   )
+save(weather,file="weather.RData")
 
-# weather <- read.csv("weather.csv")
-# weather$X <- NULL
 
 getNearestWeatherData <- function (timestamp, x=weather$Time){
   index <- which(abs(x-timestamp) == min(abs(x-timestamp)))[[1]]
@@ -77,10 +76,37 @@ airport$w.Dew_PointF <- unlist(airport.weather$Dew_PointF)
 airport$w.Humidity <- unlist(airport.weather$Humidity)
 airport$w.Sea_Level_PressureIn <- unlist(airport.weather$Sea_Level_PressureIn)
 airport$w.VisibilityMPH <- unlist(airport.weather$VisibilityMPH)
-airport$Wind_SpeedMPH <- unlist(airport.weather$Wind_SpeedMPH)
-airport$PrecipitationIn <- unlist(airport.weather$PrecipitationIn)
-airport$Conditions <- unlist(airport.weather$Conditions)
+airport$w.Wind_SpeedMPH <- unlist(airport.weather$Wind_SpeedMPH)
+airport$w.PrecipitationIn <- unlist(airport.weather$PrecipitationIn)
+airport$w.Conditions <- unlist(airport.weather$Conditions)
 airport$w.WindDirDegrees <- unlist(airport.weather$WindDirDegrees)
 
-plot(cToF(airport$tempC),airport$TemperatureF)
+# sanity checks
+plot(cToF(airport$tempC),airport$w.TemperatureF)
 plot(airport$wd,airport$w.WindDirDegrees)
+
+#clean data
+airport$w.Dew_Point[which(airport$w.Dew_Point == -9999)] <- NA
+airport$w.VisibilityMPH[which(airport$w.VisibilityMPH == -9999)] <- NA
+airport$w.Wind_SpeedMPH[which(airport$w.Wind_SpeedMPH < 0)] <- NA
+airport$w.Wind_SpeedMPH[which(airport$w.Wind_SpeedMPH == "Calm")] <- 0
+airport$w.Wind_SpeedMPH <- as.numeric(airport$w.Wind_SpeedMPH)
+airport$w.WindDirDegrees[which(airport$w.Wind_SpeedMPH == 0)] <- NA
+airport$w.PrecipitationIn[which(airport$w.PrecipitationIn == 0.00)] <- 0.005
+airport$w.PrecipitationIn[which(airport$w.PrecipitationIn == "N/A")] <- 0
+airport$w.PrecipitationIn <- as.numeric(airport$w.PrecipitationIn)
+
+# plot pm25 vs everything
+plot(x= airport$w.TemperatureF, y=airport$pm25, na.rm = TRUE)
+plot(x= airport$w.Dew_Point, y=airport$pm25, na.rm = TRUE)
+plot(x= airport$w.Humidity, y=airport$pm25, na.rm = TRUE)
+plot(x= airport$w.Sea_Level_PressureIn, y=airport$pm25, na.rm = TRUE)
+plot(x= airport$w.VisibilityMPH, y=airport$pm25, na.rm = TRUE) 
+plot(x= airport$w.Wind_SpeedMPH, y=airport$pm25, na.rm = TRUE)
+plot(x= airport$w.PrecipitationIn, y=airport$pm25, na.rm = TRUE)
+plot(x= airport$w.WindDirDegrees, y=airport$pm25, na.rm = TRUE)
+
+
+
+
+
