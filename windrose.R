@@ -6,6 +6,11 @@ library(openair)
 # install.packages("weatherData")
 library(weatherData)
 
+# http://www.statmethods.net/stats/regression.html
+# https://cran.r-project.org/web/packages/relaimpo/index.html
+#install.packages("relaimpo")
+library(relaimpo)
+
 # http://www.inside-r.org/r-doc/rpart/rpart
 # install.packages("rpart")
 library(rpart)
@@ -45,7 +50,7 @@ all.end.date <- max(all$date)
 
 # butte airport code: KBTM
 
-# showAvailableColumns("KBTM","2012-10-01",opt_detailed =T)
+#showAvailableColumns("KBTM","2012-10-01",opt_detailed =T)
 # weather <- getWeatherForDate("KBTM", 
 #                   start_date = toString(all.start.date),
 #                   end_date = toString(all.end.date),
@@ -120,6 +125,7 @@ all$w.Conditions <- as.factor(all$w.Conditions)
 all$w.PrecipitationIn[which(all$w.PrecipitationIn == 0.00)] <- 0.005
 all$w.PrecipitationIn[which(all$w.PrecipitationIn == "N/A")] <- 0
 all$w.PrecipitationIn <- as.numeric(all$w.PrecipitationIn)
+save(all, file="all.Rdata")
 
 # plot pm25 vs everything
 plot(x= all$w.TemperatureF, y=all$pm25, na.rm = TRUE)
@@ -147,7 +153,23 @@ plot(x= airport$w.Conditions, y=airport$pm25, na.rm = TRUE)
 plot(x= airport$w.WindDirDegrees, y=airport$pm25, na.rm = TRUE)
 
 
-# let's classify >= 15 as bad, < 15 as good
+site <- levels(all$site)
+num.obs <- sapply(site, function(x) length(all$pm25[all$site == x]))
+pm25.mean <- sapply(site, function(x) mean(all$pm25[all$site == x]))
+pm25.sd <- sapply(site, function(x) sd(all$pm25[all$site == x]))
+pm25.median <- sapply(site, function(x) median(all$pm25[all$site == x]))
+pm25.min <- sapply(site, function(x) min(all$pm25[all$site == x]))
+pm25.max <- sapply(site, function(x) max(all$pm25[all$site == x]))
+num.gt35 <- sapply(site, function(x) {
+    temp <- all$pm25[all$site == x]
+    length(which(temp >=35))
+  }
+)
+
+site.stats <- data.frame(site,num.obs,pm25.mean,pm25.sd,pm25.median,pm25.min,pm25.max,num.gt35)
+
+site.stats$percent.gt35 <- site.stats$num.gt35/site.stats$num.obs
+# set threshold to separate bad and good air quality
 all$isBad <- all$pm25 >= 35
 
 all.bad <- all[all$isBad,]
@@ -175,12 +197,74 @@ plot(x= all.good$w.PrecipitationIn, y=all.good$pm25, na.rm = TRUE)
 plot(x= all.good$w.Conditions, y=all.good$pm25, na.rm = TRUE)
 plot(x= all.good$w.WindDirDegrees, y=all.good$pm25, na.rm = TRUE)
 
+#color plots
 
+plot(x=all$tempC, y=all$pm25, na.rm = TRUE, col = ifelse(all$isBad,"firebrick1","dodgerblue"))
+abline(v=mean(all.bad$tempC,na.rm=T),col="darkred")
+abline(v=mean(all.good$tempC,na.rm=T),col="blue")
+boxplot(tempC~isBad,data=all, names= c("pm2.5 < 35","pm2.5 >= 35"),col= c("dodgerblue","firebrick1"))
+
+plot(x=all$ws, y=all$pm25, na.rm = TRUE, col = ifelse(all$isBad,"firebrick1","dodgerblue"))
+abline(v=mean(all.bad$ws,na.rm=T),col="darkred")
+abline(v=mean(all.good$ws,na.rm=T),col="blue")
+boxplot(ws~isBad,data=all, col= c("dodgerblue","firebrick1"))
+
+plot(x=all$w.Humidity, y=all$pm25, na.rm =TRUE, col = ifelse(all$isBad,"firebrick1","dodgerblue"))
+abline(v=mean(all.bad$w.Humidity,na.rm=T),col="darkred")
+abline(v=mean(all.good$w.Humidity,na.rm=T),col="blue")
+boxplot(w.Humidity~isBad,data=all, col= c("dodgerblue","firebrick1"))
+
+plot(x=all$w.Sea_Level_PressureIn, y=all$pm25, na.rm =TRUE, col = ifelse(all$isBad,"firebrick1","dodgerblue"))
+abline(v=mean(all.bad$w.Sea_Level_PressureIn,na.rm=T),col="darkred")
+abline(v=mean(all.good$w.Sea_Level_PressureIn,na.rm=T),col="blue")
+boxplot(w.Sea_Level_PressureIn~isBad,data=all, col= c("dodgerblue","firebrick1"))
+
+plot(x=all$w.VisibilityMPH, y=all$pm25, na.rm =TRUE, col = ifelse(all$isBad,"firebrick1","dodgerblue"))
+abline(v=mean(all.bad$w.VisibilityMPH,na.rm=T),col="darkred")
+abline(v=mean(all.good$w.VisibilityMPH,na.rm=T),col="blue")
+boxplot(w.VisibilityMPH~isBad,data=all, col= c("dodgerblue","firebrick1"))
+
+plot(x=all$w.PrecipitationIn, y=all$pm25, na.rm =TRUE, col = ifelse(all$isBad,"firebrick1","dodgerblue"))
+abline(v=mean(all.bad$w.PrecipitationIn,na.rm=T),col="darkred")
+abline(v=mean(all.good$w.PrecipitationIn,na.rm=T),col="blue")
+boxplot(w.PrecipitationIn~isBad,data=all, col= c("dodgerblue","firebrick1"))
+
+
+
+hist(all.good$tempC)
+hist(all.bad$tempC)
+t.test(all.good$tempC,all.bad$tempC)
+mean(all.good$tempC,na.rm=TRUE)
+mean(all.bad$tempC,na.rm=TRUE)
+
+hist(all.good$w.Humidity)
+hist(all.bad$w.Humidity)
+t.test(all.good$w.Humidity,all.bad$w.Humidity)
+mean(all.good$w.Humidity,na.rm=TRUE)
+mean(all.bad$w.Humidity,na.rm=TRUE)
+
+hist(all.good$w.PrecipitationIn)
+hist(all.bad$w.PrecipitationIn)
+t.test(all.good$w.PrecipitationIn,all.bad$w.PrecipitationIn)
+wilcox.test(all.good$w.PrecipitationIn,all.bad$w.PrecipitationIn)
+mean(all.good$w.PrecipitationIn,na.rm=TRUE)
+mean(all.bad$w.PrecipitationIn,na.rm=TRUE)
+
+hist(all$pm25[all$tempC >= 0])
+
+fit <- lm(pm25 ~ tempC + ws + w.Humidity + w.Sea_Level_PressureIn + w.VisibilityMPH + w.PrecipitationIn, data = all)
+calc.relimp(fit,rela=F)
+summary.lm(fit)
+anova(fit)
+plot(fit)
+
+
+################# ignore everything below this, it's mostly garbage #####################
+
+# separate training and test
 numbad <- length(which(all$isBad))
 numgood <- length(which(!all$isBad))
 
-
-# separate training and test
 set.seed(456458)
 test.bad.idx <- sample(numbad, size = floor(numbad/3))
 test.good.idx <- sample(numgood, size = floor(numgood/3))
